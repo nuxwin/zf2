@@ -250,7 +250,6 @@ class SelectTest extends \PHPUnit_Framework_TestCase
         $select = new Select;
         $select->order(array('name ASC', 'age DESC'));
         $this->assertEquals(array('name ASC', 'age DESC'), $select->getRawState('order'));
-
     }
 
     /**
@@ -722,6 +721,30 @@ class SelectTest extends \PHPUnit_Framework_TestCase
             'processSelect' => array(array(array('"x".*')), '(SELECT "bar".* FROM "bar" WHERE "y" LIKE ?) AS "x"'),
         );
 
+        $select33 = new Select;
+        $select33->from('table')->columns(array('*'))->where(array(
+            'c1' => null,
+            'c2' => array(1, 2, 3),
+            new \Zend\Db\Sql\Predicate\IsNotNull('c3')
+        ));
+        $sqlPrep33 = 'SELECT "table".* FROM "table" WHERE "c1" IS NULL AND "c2" IN (?, ?, ?) AND "c3" IS NOT NULL';
+        $sqlStr33 = 'SELECT "table".* FROM "table" WHERE "c1" IS NULL AND "c2" IN (\'1\', \'2\', \'3\') AND "c3" IS NOT NULL';
+        $internalTests33 = array(
+            'processSelect' => array(array(array('"table".*')), '"table"'),
+            'processWhere'  => array('"c1" IS NULL AND "c2" IN (?, ?, ?) AND "c3" IS NOT NULL')
+        );
+
+        // @author Demian Katz
+        $select34 = new Select;
+        $select34->from('table')->order(array(
+            new Expression('isnull(?) DESC', array('name'), array(Expression::TYPE_IDENTIFIER)),
+            'name'
+        ));
+        $sqlPrep34 = 'SELECT "table".* FROM "table" ORDER BY isnull("name") DESC, "name" ASC';
+        $sqlStr34 = 'SELECT "table".* FROM "table" ORDER BY isnull("name") DESC, "name" ASC';
+        $internalTests34 = array(
+            'processOrder'  => array(array(array('isnull("name") DESC'), array('"name"', Select::ORDER_ASCENDING)))
+        );
 
         /**
          * $select = the select object
@@ -765,6 +788,8 @@ class SelectTest extends \PHPUnit_Framework_TestCase
             array($select30, $sqlPrep30, array(),    $sqlStr30, $internalTests30),
             array($select31, $sqlPrep31, array(),    $sqlStr31, $internalTests31),
             array($select32, $sqlPrep32, array(),    $sqlStr32, $internalTests32),
+            array($select33, $sqlPrep33, array(),    $sqlStr33, $internalTests33),
+            array($select34, $sqlPrep34, array(),    $sqlStr34, $internalTests34),
         );
     }
 
